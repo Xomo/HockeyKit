@@ -35,7 +35,9 @@ public class CrashManager {
     }
 
     if (hasStackTraces()) {
-      showDialog(context);
+//      showDialog(context);
+        submitStackTraces(context);
+        registerHandler();
     }
     else {
       registerHandler();
