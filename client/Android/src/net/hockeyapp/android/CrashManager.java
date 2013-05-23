@@ -24,18 +24,25 @@ public class CrashManager {
   private static String identifier = null;
   private static String urlString = null;
 
-  public static void register(Context context, String urlString, String appIdentifier) {
+  public static void register(final Context context, String urlString, String appIdentifier) {
     CrashManager.urlString = urlString;
     CrashManager.identifier = appIdentifier;
 
     Constants.loadFromContext(context);
-    
+
     if (CrashManager.identifier == null) {
       CrashManager.identifier = Constants.APP_PACKAGE;
     }
 
     if (hasStackTraces()) {
-      showDialog(context);
+//      showDialog(context);
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                submitStackTraces(context);
+            }
+        }).start();
+        registerHandler();
     }
     else {
       registerHandler();
@@ -59,7 +66,7 @@ public class CrashManager {
       public void onClick(DialogInterface dialog, int which) {
         deleteStackTraces(context);
         registerHandler();
-      } 
+      }
     });
 
     builder.setPositiveButton(R.string.crash_dialog_positive_button, new DialogInterface.OnClickListener() {
@@ -71,7 +78,7 @@ public class CrashManager {
             registerHandler();
           }
         }.start();
-      } 
+      }
     });
 
     builder.create().show();
@@ -91,7 +98,7 @@ public class CrashManager {
   }
 
   private static String getURLString() {
-    return urlString + "api/2/apps/" + identifier + "/crashes/";      
+    return urlString + "api/2/apps/" + identifier + "/crashes/";
   }
 
   public static void deleteStackTraces(Context context) {
@@ -105,14 +112,14 @@ public class CrashManager {
         try {
           Log.d(Constants.TAG, "Delete stacktrace " + list[index] + ".");
           context.deleteFile(list[index]);
-        } 
+        }
         catch (Exception e) {
           e.printStackTrace();
         }
       }
     }
   }
-  
+
   public static void submitStackTraces(Context context) {
     Log.d(Constants.TAG, "Looking for exceptions in: " + Constants.FILES_PATH);
     String[] list = searchForStackTraces();
@@ -135,27 +142,27 @@ public class CrashManager {
 
           // Transmit stack trace with POST request
           Log.d(Constants.TAG, "Transmitting crash data: \n" + stacktrace);
-          DefaultHttpClient httpClient = new DefaultHttpClient(); 
+          DefaultHttpClient httpClient = new DefaultHttpClient();
           HttpPost httpPost = new HttpPost(getURLString());
-          List <NameValuePair> nvps = new ArrayList <NameValuePair>(); 
+          List <NameValuePair> nvps = new ArrayList <NameValuePair>();
           nvps.add(new BasicNameValuePair("raw", stacktrace));
-          httpPost.setEntity(new UrlEncodedFormEntity(nvps, HTTP.UTF_8)); 
-          httpClient.execute(httpPost);                                   
+          httpPost.setEntity(new UrlEncodedFormEntity(nvps, HTTP.UTF_8));
+          httpClient.execute(httpPost);
         }
         catch (Exception e) {
           e.printStackTrace();
-        } 
+        }
         finally {
           try {
             context.deleteFile(list[index]);
-          } 
+          }
           catch (Exception e) {
             e.printStackTrace();
           }
         }
       }
     }
-  } 
+  }
 
   public static boolean hasStackTraces() {
     return (searchForStackTraces().length > 0);
@@ -167,11 +174,11 @@ public class CrashManager {
     dir.mkdir();
 
     // Filter for ".stacktrace" files
-    FilenameFilter filter = new FilenameFilter() { 
+    FilenameFilter filter = new FilenameFilter() {
       public boolean accept(File dir, String name) {
-        return name.endsWith(".stacktrace"); 
-      } 
-    }; 
-    return dir.list(filter); 
+        return name.endsWith(".stacktrace");
+      }
+    };
+    return dir.list(filter);
   }
 }

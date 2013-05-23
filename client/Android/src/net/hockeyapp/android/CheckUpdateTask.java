@@ -12,8 +12,8 @@ import java.net.URLEncoder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -21,136 +21,136 @@ import android.os.AsyncTask;
 import android.provider.Settings;
 
 public class CheckUpdateTask extends AsyncTask<String, String, JSONArray>{
-  private Context context = null;
-  private String urlString = null;
-  private String appIdentifier = null;
-  
-  public CheckUpdateTask(Context context, String urlString) {
-    this.appIdentifier = null;
-    this.context = context;
-    this.urlString = urlString;
-    
-    Constants.loadFromContext(context);
-  }
-  
-  public CheckUpdateTask(Context context, String urlString, String appIdentifier) {
-    this.appIdentifier = appIdentifier;
-    this.context = context;
-    this.urlString = urlString;
+    private Activity activity = null;
+    private String urlString = null;
+    private String appIdentifier = null;
 
-    Constants.loadFromContext(context);
-  }
-  
-  public void attach(Context context) {
-    this.context = context;
+    public CheckUpdateTask(Activity activity, String urlString) {
+        this.appIdentifier = null;
+        this.activity = activity;
+        this.urlString = urlString;
 
-    Constants.loadFromContext(context);
-  }
-  
-  public void detach() {
-    context = null;
-  }
-  
-  @Override
-  protected JSONArray doInBackground(String... args) {
-    try {
-      int versionCode = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_META_DATA).versionCode;
-      
-      URL url = new URL(getURLString("json"));
-      URLConnection connection = url.openConnection();
-      connection.addRequestProperty("User-Agent", "Hockey/Android");
-      connection.setRequestProperty("connection", "close");
-      connection.connect();
+        Constants.loadFromContext(activity);
+    }
 
-      InputStream inputStream = new BufferedInputStream(connection.getInputStream());
-      String jsonString = convertStreamToString(inputStream);
-      inputStream.close();
-      
-      JSONArray json = new JSONArray(jsonString);
-      for (int index = 0; index < json.length(); index++) {
-        JSONObject entry = json.getJSONObject(index);
-        if (entry.getInt("version") > versionCode) {
-          return json;
+    public CheckUpdateTask(Activity activity, String urlString, String appIdentifier) {
+        this.appIdentifier = appIdentifier;
+        this.activity = activity;
+        this.urlString = urlString;
+
+        Constants.loadFromContext(activity);
+    }
+
+    public void attach(Activity activity) {
+        this.activity = activity;
+
+        Constants.loadFromContext(activity);
+    }
+
+    public void detach() {
+        activity = null;
+    }
+
+    @Override
+    protected JSONArray doInBackground(String... args) {
+        try {
+            int versionCode = activity.getPackageManager().getPackageInfo(activity.getPackageName(), PackageManager.GET_META_DATA).versionCode;
+
+            URL url = new URL(getURLString("json"));
+            URLConnection connection = url.openConnection();
+            connection.addRequestProperty("User-Agent", "Hockey/Android");
+            connection.setRequestProperty("connection", "close");
+            connection.connect();
+
+            InputStream inputStream = new BufferedInputStream(connection.getInputStream());
+            String jsonString = convertStreamToString(inputStream);
+            inputStream.close();
+
+            JSONArray json = new JSONArray(jsonString);
+            for (int index = 0; index < json.length(); index++) {
+                JSONObject entry = json.getJSONObject(index);
+                if (entry.getInt("version") > versionCode) {
+                    return json;
+                }
+            }
         }
-      }
-    }
-    catch (Exception e) {
-      e.printStackTrace();
-    }
-    
-    return null;
-  }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
 
-  @Override
-  protected void onPostExecute(JSONArray updateInfo) {
-    if (updateInfo != null) {
-      showDialog(updateInfo);
+        return null;
     }
-  }
-  
-  private String getURLString(String format) {
-    StringBuilder builder = new StringBuilder();
-    builder.append(urlString);
-    builder.append("api/2/apps/");
-    builder.append((this.appIdentifier != null ? this.appIdentifier : context.getPackageName()));
-    builder.append("?format=" + format);
-    builder.append("&udid=" + URLEncoder.encode(Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ANDROID_ID)));
-    builder.append("&os=Android");
-    builder.append("&os_version=" + URLEncoder.encode(Constants.ANDROID_VERSION));
-    builder.append("&device=" + URLEncoder.encode(Constants.PHONE_MODEL));
-    builder.append("&oem=" + URLEncoder.encode(Constants.PHONE_MANUFACTURER));
-    builder.append("&app_version=" + URLEncoder.encode(Constants.APP_VERSION));
-    
-    return builder.toString();
-  }
-  
-  private void showDialog(final JSONArray updateInfo) {
-    if (context == null) {
-      return;
+
+    @Override
+    protected void onPostExecute(JSONArray updateInfo) {
+        if (updateInfo != null) {
+            showDialog(updateInfo);
+        }
     }
-    
-    AlertDialog.Builder builder = new AlertDialog.Builder(context);
-    builder.setTitle(R.string.update_dialog_title);
-    builder.setMessage(R.string.update_dialog_message);
 
-    builder.setNegativeButton(R.string.update_dialog_negative_button, new DialogInterface.OnClickListener() {
-      public void onClick(DialogInterface dialog, int which) {
-      } 
-    });
-    
-    builder.setPositiveButton(R.string.update_dialog_positive_button, new DialogInterface.OnClickListener() {
-      public void onClick(DialogInterface dialog, int which) {
-        Intent intent = new Intent(context, UpdateActivity.class);
-        intent.putExtra("json", updateInfo.toString());
-        intent.putExtra("url", getURLString("apk"));
-        context.startActivity(intent);
-      } 
-    });
-    
-    builder.create().show();
-  }
+    private String getURLString(String format) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(urlString);
+        builder.append("api/2/apps/");
+        builder.append((this.appIdentifier != null ? this.appIdentifier : activity.getPackageName()));
+        builder.append("?format=" + format);
+        builder.append("&udid=" + URLEncoder.encode(Settings.Secure.getString(activity.getContentResolver(), Settings.Secure.ANDROID_ID)));
+        builder.append("&os=Android");
+        builder.append("&os_version=" + URLEncoder.encode(Constants.ANDROID_VERSION));
+        builder.append("&device=" + URLEncoder.encode(Constants.PHONE_MODEL));
+        builder.append("&oem=" + URLEncoder.encode(Constants.PHONE_MANUFACTURER));
+        builder.append("&app_version=" + URLEncoder.encode(Constants.APP_VERSION));
 
-  private static String convertStreamToString(InputStream inputStream) {
-    BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream), 1024);
-    StringBuilder stringBuilder = new StringBuilder();
-
-    String line = null;
-    try {
-      while ((line = reader.readLine()) != null) {
-        stringBuilder.append(line + "\n");
-      }
-    } 
-    catch (IOException e) {
-      e.printStackTrace();
-    } 
-    finally {
-      try {
-        inputStream.close();
-      } 
-      catch (IOException e) {
-        e.printStackTrace();
-      }
+        return builder.toString();
     }
-    return stringBuilder.toString();
-  }
+
+    private void showDialog(final JSONArray updateInfo) {
+        if ((activity == null) || (activity.isFinishing())) {
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+        builder.setTitle(R.string.update_dialog_title);
+        builder.setMessage(R.string.update_dialog_message);
+
+        builder.setNegativeButton(R.string.update_dialog_negative_button, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+            }
+        });
+
+        builder.setPositiveButton(R.string.update_dialog_positive_button, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                Intent intent = new Intent(activity, UpdateActivity.class);
+                intent.putExtra("json", updateInfo.toString());
+                intent.putExtra("url", getURLString("apk"));
+                activity.startActivity(intent);
+            }
+        });
+
+        builder.create().show();
+    }
+
+    private static String convertStreamToString(InputStream inputStream) {
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream), 1024);
+        StringBuilder stringBuilder = new StringBuilder();
+
+        String line = null;
+        try {
+            while ((line = reader.readLine()) != null) {
+                stringBuilder.append(line + "\n");
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        finally {
+            try {
+                inputStream.close();
+            }
+            catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return stringBuilder.toString();
+    }
 }
